@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e
+set -x
 
 # Environment / working directories
 case ${PLATFORM} in
@@ -123,6 +124,7 @@ VERSION_FRIBIDI=1.0.11
 VERSION_PANGO=1.50.3
 VERSION_SVG=2.52.5
 VERSION_AOM=3.2.0
+VERSION_DE265=1.0.8
 VERSION_HEIF=1.12.0
 VERSION_CGIF=0.1.0
 
@@ -174,6 +176,7 @@ version_latest "fribidi" "$VERSION_FRIBIDI" "857"
 version_latest "pango" "$VERSION_PANGO" "11783"
 version_latest "svg" "$VERSION_SVG" "5420"
 version_latest "aom" "$VERSION_AOM" "17628"
+version_latest "de265" "$VERSION_DE265" "11239"
 version_latest "heif" "$VERSION_HEIF" "64439"
 #version_latest "cgif" "$VERSION_CGIF" "" # not yet in release monitoring
 if [ "$ALL_AT_VERSION_LATEST" = "false" ]; then exit 1; fi
@@ -267,6 +270,13 @@ AOM_AS_FLAGS="${FLAGS}" cmake -G"Unix Makefiles" \
   ..
 make install/strip
 
+mkdir ${DEPS}/de265
+$CURL https://github.com/strukturag/libde265/releases/download/v${VERSION_DE265}/libde265-${VERSION_DE265}.tar.gz | tar xzC ${DEPS}/de265 --strip-components=1 
+cd ${DEPS}/de265
+./configure --host=${CHOST} --prefix=${TARGET} --enable-static --disable-shared --disable-dependency-tracking \
+  --disable-dec265 --disable-sherlock265
+make install-strip
+
 mkdir ${DEPS}/heif
 $CURL https://github.com/strukturag/libheif/releases/download/v${VERSION_HEIF}/libheif-${VERSION_HEIF}.tar.gz | tar xzC ${DEPS}/heif --strip-components=1
 cd ${DEPS}/heif
@@ -282,7 +292,7 @@ $CURL https://github.com/strukturag/libheif/pull/551/commits/e9004e96fbaf45b97d7
 $CURL https://github.com/strukturag/libheif/pull/583/commits/7da30e57498b2b67434abd4767377ee7b3d93ee4.patch | git apply -
 CFLAGS="${CFLAGS} -O3" CXXFLAGS="${CXXFLAGS} -O3" ./configure \
   --host=${CHOST} --prefix=${TARGET} --enable-static --disable-shared --disable-dependency-tracking \
-  --disable-gdk-pixbuf --disable-go --disable-examples --disable-libde265 --disable-x265
+  --disable-gdk-pixbuf --disable-go --disable-examples --disable-x265
 make install-strip
 
 mkdir ${DEPS}/jpeg
@@ -544,6 +554,7 @@ printf "{\n\
   \"aom\": \"${VERSION_AOM}\",\n\
   \"cairo\": \"${VERSION_CAIRO}\",\n\
   \"cgif\": \"${VERSION_CGIF}\",\n\
+  \"de265\": \"${VERSION_DE265}\",\n\
   \"exif\": \"${VERSION_EXIF}\",\n\
   \"expat\": \"${VERSION_EXPAT}\",\n\
   \"ffi\": \"${VERSION_FFI}\",\n\
