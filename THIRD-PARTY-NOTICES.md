@@ -17,6 +17,7 @@ used under the terms of the following licences:
 | glib          | LGPLv3                                                                                                    |
 | harfbuzz      | MIT Licence                                                                                               |
 | lcms          | MIT Licence                                                                                               |
+| libde265      | LGPLv3                                                                                                    |
 | libexif       | LGPLv3                                                                                                    |
 | libffi        | MIT Licence                                                                                               |
 | libgsf        | LGPLv3                                                                                                    |

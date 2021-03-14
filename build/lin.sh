@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e
+set -x
 
 # Environment / working directories
 case ${PLATFORM} in
@@ -93,6 +94,7 @@ VERSION_PANGO=1.48.0
 VERSION_SVG=2.50.2
 VERSION_GIF=5.1.4
 VERSION_AOM=2.0.1
+VERSION_DE265=1.0.8
 VERSION_HEIF=1.10.0
 
 # Remove patch version component
@@ -101,12 +103,15 @@ without_patch() {
 }
 
 # Check for newer versions
+ALLOW_OLD_VERSIONS=true
 ALL_AT_VERSION_LATEST=true
 version_latest() {
-  VERSION_LATEST=$($CURL https://release-monitoring.org/api/project/$3 | jq -r '.versions[]' | grep -E -m1 '^[0-9]+(.[0-9]+)*$')
-  if [ "$VERSION_LATEST" != "$2" ]; then
-    ALL_AT_VERSION_LATEST=false
-    echo "$1 version $2 has been superseded by $VERSION_LATEST"
+  if [ "$ALLOW_OLD_VERSIONS" != "true" ]; then
+    VERSION_LATEST=$($CURL https://release-monitoring.org/api/project/$3 | jq -r '.versions[]' | grep -E -m1 '^[0-9]+(.[0-9]+)*$')
+    if [ "$VERSION_LATEST" != "$2" ]; then
+      ALL_AT_VERSION_LATEST=false
+      echo "$1 version $2 has been superseded by $VERSION_LATEST"
+    fi
   fi
 }
 version_latest "zlib" "$VERSION_ZLIB" "5303"
@@ -135,6 +140,7 @@ version_latest "pango" "$VERSION_PANGO" "11783"
 version_latest "svg" "$VERSION_SVG" "5420"
 #version_latest "gif" "$VERSION_GIF" "1158" # v5.1.5+ provides a Makefile only so will require custom cross-compilation setup
 #version_latest "aom" "$VERSION_AOM" "17628" # latest version in release monitoring does not exist
+version_latest "de265" "$VERSION_DE265" "11239"
 version_latest "heif" "$VERSION_HEIF" "64439"
 if [ "$ALL_AT_VERSION_LATEST" = "false" ]; then exit 1; fi
 
@@ -216,11 +222,18 @@ AOM_AS_FLAGS="${FLAGS}" LDFLAGS=${LDFLAGS/\$/} cmake -G"Unix Makefiles" \
   ..
 make install/strip
 
+mkdir ${DEPS}/de265
+$CURL https://github.com/strukturag/libde265/releases/download/v${VERSION_DE265}/libde265-${VERSION_DE265}.tar.gz | tar xzC ${DEPS}/de265 --strip-components=1 
+cd ${DEPS}/de265
+./configure --host=${CHOST} --prefix=${TARGET} --enable-static --disable-shared --disable-dependency-tracking \
+  --disable-dec265 --disable-sherlock265
+make install-strip
+
 mkdir ${DEPS}/heif
 $CURL https://github.com/strukturag/libheif/releases/download/v${VERSION_HEIF}/libheif-${VERSION_HEIF}.tar.gz | tar xzC ${DEPS}/heif --strip-components=1
 cd ${DEPS}/heif
 ./configure --host=${CHOST} --prefix=${TARGET} --enable-static --disable-shared --disable-dependency-tracking \
-  --disable-gdk-pixbuf --disable-go --disable-examples --disable-libde265 --disable-x265
+  --disable-gdk-pixbuf --disable-go --disable-examples --disable-x265
 make install-strip
 
 mkdir ${DEPS}/jpeg
@@ -438,6 +451,7 @@ cd ${TARGET}
 printf "{\n\
   \"aom\": \"${VERSION_AOM}\",\n\
   \"cairo\": \"${VERSION_CAIRO}\",\n\
+  \"de265\": \"${VERSION_DE265}\",\n\
   \"exif\": \"${VERSION_EXIF}\",\n\
   \"expat\": \"${VERSION_EXPAT}\",\n\
   \"ffi\": \"${VERSION_FFI}\",\n\
